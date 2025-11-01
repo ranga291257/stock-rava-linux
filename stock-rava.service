@@ -1,0 +1,24 @@
+[Unit]
+Description=Stock RAVA - Risk And Volatility Analysis Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=%h/poc/Fintec/boom_bust
+Environment="PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin"
+ExecStart=/usr/bin/python3 -m streamlit run Stock_RAVA.py --server.headless true --server.port 8501
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=stock-rava
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target
+
+

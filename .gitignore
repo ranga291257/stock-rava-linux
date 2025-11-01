@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+fintech_env/
+venv/
+.venv/
+env/
+ENV/
+
+# Streamlit
+.streamlit/
+
+# Logs and PID files
+*.log
+*.pid
+stock_rava.log
+stock_rava.pid
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Service files (user-specific)
+~/.config/systemd/user/stock-rava.service
+
