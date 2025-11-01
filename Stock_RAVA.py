@@ -1,6 +1,6 @@
 """
 Stock RAVA - Risk And Volatility Analysis Dashboard
-
+LINUX version 1.0.0
 Streamlit Web Application for comprehensive stock volatility and risk analysis.
 RAVA stands for: Risk And Volatility Analysis
 
