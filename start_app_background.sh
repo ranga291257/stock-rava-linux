@@ -25,7 +25,8 @@ fi
 check_python || exit 1
 
 # Setup Python environment (venv or system)
-setup_python_env
+# Note: Returns 1 for system Python (not an error), so we don't check return value
+setup_python_env || true
 
 # Check Streamlit
 check_streamlit || exit 1

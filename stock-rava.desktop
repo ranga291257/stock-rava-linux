@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Stock RAVA
+GenericName=Risk And Volatility Analysis Dashboard
+Comment=Stock Risk & Volatility Analysis Dashboard - Analyze stock volatility and risk metrics
+Exec=xdg-open http://localhost:8501
+Icon=/home/ranga-minipc1/stock-rava/stock-rava-icon.png
+Terminal=false
+Categories=Finance;Office;Network;
+Keywords=stock;finance;volatility;risk;analysis;dashboard;trading;
+StartupNotify=true
+MimeType=
+

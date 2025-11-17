@@ -4,78 +4,727 @@ Complete guide for deploying **Stock RAVA** (Risk And Volatility Analysis Dashbo
 
 ## Table of Contents
 
-1. [Quick Start](#quick-start)
-2. [Overview](#overview)
-3. [Prerequisites](#prerequisites)
-4. [Environment Setup](#environment-setup)
-5. [Deployment Options](#deployment-options)
-6. [Port Configuration](#port-configuration)
-7. [Firewall Configuration](#firewall-configuration)
-8. [Troubleshooting](#troubleshooting)
-9. [Performance Optimization](#performance-optimization)
-10. [Testing in WSL](#testing-in-wsl)
-11. [Advanced Configuration](#advanced-configuration)
-12. [Advanced: Virtual Environments (Optional)](#advanced-virtual-environments-optional)
+### For End Users 👥
+1. [Quick Start - Using the Desktop Icon](#quick-start---using-the-desktop-icon) 🖱️
+2. [Operations - Managing Background Processes](#operations---managing-background-processes) ⚙️
+3. [First Time Setup](#first-time-setup) 🚀
+
+### For Developers & Administrators 👨‍💻
+4. [Technical Overview](#technical-overview)
+5. [Deployment Methods Explained](#deployment-methods-explained)
+6. [Background vs Foreground Processes](#background-vs-foreground-processes)
+7. [System Architecture](#system-architecture)
+8. [Advanced Configuration](#advanced-configuration)
+9. [Troubleshooting & Debugging](#troubleshooting--debugging)
+
+### Reference 📚
+10. [Port Configuration](#port-configuration)
+11. [Firewall Configuration](#firewall-configuration)
+12. [Virtual Environments](#virtual-environments-optional)
 13. [Security Considerations](#security-considerations)
 14. [Uninstallation](#uninstallation)
 
 ---
 
-## Quick Start
+## Quick Start - Using the Desktop Icon 🖱️
 
-**For small Linux boxes - System-wide installation (no virtual environment):**
+**For users who just want to click an icon and use the app:**
+
+### What You Need to Know
+
+Stock RAVA is a **web application** that runs in the background on your computer. To use it:
+
+1. **Make sure it's running** (see [Operations](#operations---managing-background-processes) below)
+2. **Click the desktop icon** "Stock RAVA" in your application menu
+3. **Your browser opens** to http://localhost:8501
+4. **Use the dashboard** to analyze stocks
+
+### Is the App Running?
+
+**Check if it's running:**
+```bash
+cd ~/stock-rava
+./status_app.sh
+```
+
+**If it says "RUNNING"**: ✅ You're good! Click the icon.
+
+**If it says "NOT RUNNING"**: You need to start it first (see [Operations](#operations---managing-background-processes) below).
+
+### Best Setup: Auto-Start on Boot
+
+**Want it to always be ready?** Set it up **once** to start automatically:
+
+```bash
+cd ~/stock-rava
+./install_service.sh
+loginctl enable-linger $USER
+```
+
+**Important:** This is a **one-time setup**. After running these commands:
+- ✅ The service is **installed** (creates systemd service file)
+- ✅ The service is **enabled** (will start on boot)
+- ✅ The app will **start automatically** when your PC boots
+- ✅ Always be ready when you click the icon
+- ✅ Restart automatically if it crashes
+
+**That's it!** Now you can just click the icon anytime - even after rebooting.
+
+**Note:** If you just installed the service, you may need to start it once manually:
+```bash
+systemctl --user start stock-rava.service
+```
+After that, it will start automatically on every boot.
+
+---
+
+## Operations - Managing Background Processes ⚙️
+
+**Understanding how Stock RAVA runs and how to manage it:**
+
+### What is a Background Process?
+
+Stock RAVA runs as a **background process** - it runs on your computer even when you're not looking at it. Think of it like a web server that's always ready to serve the dashboard when you click the icon.
+
+### How Background Processes Work
+
+1. **The app starts** → Runs in the background (you don't see it in a terminal)
+2. **It listens on port 8501** → Waiting for your browser to connect
+3. **You click the icon** → Browser connects to http://localhost:8501
+4. **Dashboard loads** → You see the Stock RAVA interface
+
+### Starting the Background Process
+
+**Option 1: Manual Start (Quick)**
+```bash
+cd ~/stock-rava
+./start_app_background.sh
+```
+- Starts the app in the background
+- Saves process ID (PID) for easy stopping
+- Logs to `stock_rava.log`
+- **Note:** Won't auto-start on reboot
+
+**Option 2: Auto-Start Service (Recommended)**
+
+**One-time setup:**
+```bash
+cd ~/stock-rava
+./install_service.sh        # Installs the service (one-time)
+loginctl enable-linger $USER # Enables boot-time start (one-time)
+systemctl --user start stock-rava.service  # Start it now (first time)
+```
+
+**What this does:**
+- **`./install_service.sh`** - Creates the systemd service file (one-time installation)
+- **`loginctl enable-linger`** - Allows service to start on boot even without login
+- **`systemctl --user start`** - Starts the service now (first time only)
+
+**After setup:**
+- ✅ Starts automatically on boot (no manual start needed)
+- ✅ Restarts automatically if it crashes
+- ✅ Managed by systemd (Linux service manager)
+- **Best for:** Always-on setup
+
+**Note:** The service installation is a **one-time setup**. Once installed and enabled, it will start automatically on every boot. You don't need to run `install_service.sh` again.
+
+### Checking if the Process is Running
+
+```bash
+cd ~/stock-rava
+./status_app.sh
+```
+
+**What you'll see:**
+- ✅ **RUNNING** - Process is active, icon will work
+- ❌ **NOT RUNNING** - Need to start it first
+- ⚠️ **UNKNOWN** - No process found
+
+**Detailed check:**
+```bash
+# Check process status
+./status_app.sh
+
+# Check if port 8501 is listening
+ss -tuln | grep :8501
+
+# View what's happening (logs)
+tail -f stock_rava.log
+```
+
+### Stopping the Background Process
+
+**If using manual start:**
+```bash
+cd ~/stock-rava
+./stop_app.sh
+```
+
+**If using systemd service:**
+```bash
+systemctl --user stop stock-rava.service
+```
+
+### Viewing Logs (What's Happening)
+
+**Manual start logs:**
+```bash
+cd ~/stock-rava
+tail -f stock_rava.log
+```
+
+**Systemd service logs:**
+```bash
+journalctl --user -u stock-rava.service -f
+```
+
+### Common Operations
+
+| Task | Command |
+|------|---------|
+| **Start app** | `./start_app_background.sh` |
+| **Stop app** | `./stop_app.sh` |
+| **Check status** | `./status_app.sh` |
+| **View logs** | `tail -f stock_rava.log` |
+| **Start service** | `systemctl --user start stock-rava.service` |
+| **Stop service** | `systemctl --user stop stock-rava.service` |
+| **Service status** | `systemctl --user status stock-rava.service` |
+
+### Troubleshooting: Icon Doesn't Work
+
+**If clicking the icon doesn't open the app:**
+
+1. **Check if app is running:**
+   ```bash
+   cd ~/stock-rava
+   ./status_app.sh
+   ```
+
+2. **If not running, start it:**
+   ```bash
+   ./start_app_background.sh
+   ```
+
+3. **Wait a few seconds** for it to start, then try the icon again
+
+4. **Check logs** if it still doesn't work:
+   ```bash
+   tail -20 stock_rava.log
+   ```
+
+5. **Manual test:** Open browser to http://localhost:8501 directly
+
+---
+
+## First Time Setup 🚀
+
+**Setting up Stock RAVA for the first time:**
+
+### Step 1: Install Dependencies
 
 ```bash
 # Navigate to project directory
 cd ~/stock-rava
 
-# Make scripts executable (required first time)
+# Make scripts executable
 chmod +x *.sh
 
-# Note: All scripts share common functions in app_common.sh
-# This ensures consistent behavior (venv detection, Python checks, etc.)
-
-# Add ~/.local/bin to PATH (to avoid warnings and enable commands)
+# Add ~/.local/bin to PATH
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
 export PATH="$HOME/.local/bin:$PATH"
 
-# Upgrade pip (requires --break-system-packages on Ubuntu/Debian)
+# Install Python packages
 pip install --upgrade pip --break-system-packages
-
-# Install project dependencies
 pip install -r requirements_app.txt --break-system-packages
 
-# Verify streamlit is accessible
+# Verify installation
 streamlit --version
-
-# Start the app
-./start_app_background.sh
-
-# Access at http://localhost:8501
 ```
 
-**Notes:**
-- The `--break-system-packages` flag is required for system-wide installation on Ubuntu/Debian
-- If you see PATH warnings during installation, they're harmless - the PATH fix above ensures commands work correctly
-- For production servers, consider using virtual environments (see [Advanced: Virtual Environments](#advanced-virtual-environments-optional) below)
+### Step 2: Install Desktop Shortcut
+
+```bash
+./install_desktop.sh
+```
+
+This creates the "Stock RAVA" icon in your application menu.
+
+### Step 3: Set Up Auto-Start (Recommended)
+
+```bash
+./install_service.sh
+loginctl enable-linger $USER
+```
+
+This makes the app start automatically on boot.
+
+### Step 4: Test It
+
+1. **Start the app:**
+   ```bash
+   ./start_app_background.sh
+   ```
+
+2. **Click the desktop icon** or open http://localhost:8501
+
+3. **You should see** the Stock RAVA dashboard!
 
 ---
 
-## Overview
+## Technical Overview
 
-This guide covers deploying the Stock RAVA Streamlit application on Linux systems using:
-- Background bash scripts (quick deployment)
-- GNU Screen sessions (development)
-- Systemd user services (production)
+**For developers and administrators:**
 
-**App Name**: `Stock_RAVA.py`
-- **RAVA** = Risk And Volatility Analysis
-- Cross-platform Python application
+### Application Architecture
 
-**Script Structure:**
-- All deployment scripts share common functions in `app_common.sh`
-- Scripts automatically detect virtual environments or use system Python
-- Consistent behavior across all deployment methods
+**Stock RAVA** is a web-based Risk And Volatility Analysis Dashboard built with:
+- **Framework**: Streamlit (Python web framework)
+- **Main File**: `Stock_RAVA.py`
+- **Port**: 8501 (default)
+- **Access**: http://localhost:8501
+
+### Key Components
+
+1. **Main Application** (`Stock_RAVA.py`)
+   - Streamlit web application
+   - Provides web interface for stock analysis
+   - Runs on port 8501
+
+2. **Deployment Scripts**
+   - `start_app_background.sh` - Background process (nohup)
+   - `start_app_screen.sh` - Screen session (interactive)
+   - `install_service.sh` - Systemd service (production)
+   - `stop_app.sh` - Stop background processes
+   - `status_app.sh` - Check process status
+
+3. **Common Functions** (`app_common.sh`)
+   - Shared by all scripts
+   - Virtual environment detection
+   - Python/Streamlit checks
+   - Port checking
+
+---
+
+## Deployment Methods Explained
+
+**Technical details of how Stock RAVA can be deployed:**
+
+### Method 1: Background Script (`start_app_background.sh`)
+
+**How it works:**
+- Uses `nohup` to run process in background
+- Saves PID to `stock_rava.pid` for process management
+- Redirects output to `stock_rava.log`
+- Process survives terminal closure
+- **Process type**: Background daemon (nohup)
+
+**Technical details:**
+```bash
+nohup streamlit run Stock_RAVA.py --server.headless true > stock_rava.log 2>&1 &
+echo $! > stock_rava.pid
+```
+
+**Use cases:**
+- Quick testing
+- Single-user deployment
+- Development environments
+- Systems without systemd
+
+**Limitations:**
+- No auto-restart on crash
+- No auto-start on boot
+- Manual log management
+- PID file can become stale
+
+### Method 2: Screen Session (`start_app_screen.sh`)
+
+**How it works:**
+- Creates detached GNU Screen session named `stock_rava`
+- Process runs in screen, can be attached/detached
+- Interactive terminal access for debugging
+- **Process type**: Foreground in detached screen session
+
+**Technical details:**
+```bash
+screen -dmS stock_rava bash -c "cd '$PROJECT_ROOT' && streamlit run Stock_RAVA.py --server.headless true; exec bash"
+```
+
+**Use cases:**
+- Development and debugging
+- Interactive monitoring
+- Need to see live output
+- Testing and troubleshooting
+
+**Limitations:**
+- Session ends if screen process dies
+- No auto-restart
+- Requires screen to be installed
+- Not suitable for production
+
+### Method 3: Systemd User Service (`install_service.sh`)
+
+**How it works:**
+- Creates systemd user service unit file
+- Service managed by systemd daemon
+- Auto-starts on login (or boot with lingering)
+- Auto-restarts on failure
+- **Process type**: Managed systemd service
+
+**Technical details:**
+- Service file: `~/.config/systemd/user/stock-rava.service`
+- Managed via `systemctl --user` commands
+- Logs via `journalctl --user`
+- Restart policy: `Restart=always`
+
+**Use cases:**
+- Production deployment
+- Always-on servers
+- Auto-start requirements
+- Professional deployment
+
+**Advantages:**
+- Auto-restart on crash
+- Auto-start on boot/login
+- Integrated logging (journald)
+- System integration
+- Process monitoring
+
+---
+
+## Background vs Foreground Processes
+
+**Understanding the difference and when to use each:**
+
+### Background Processes
+
+**What they are:**
+- Run independently of terminal session
+- No visible terminal output
+- Continue running after terminal closes
+- Managed via PID files or service managers
+
+**How Stock RAVA uses them:**
+
+1. **Background Script Method:**
+   ```bash
+   nohup streamlit run Stock_RAVA.py > log.txt 2>&1 &
+   ```
+   - Process runs in background
+   - Output redirected to log file
+   - PID saved for management
+   - Can close terminal
+
+2. **Systemd Service Method:**
+   ```bash
+   systemctl --user start stock-rava.service
+   ```
+   - Managed by systemd
+   - Runs as background service
+   - Auto-restart capabilities
+   - Integrated with system
+
+**Characteristics:**
+- ✅ Survives terminal closure
+- ✅ No interactive output
+- ✅ Suitable for production
+- ✅ Can run on boot
+- ❌ Harder to debug (need logs)
+- ❌ No interactive access
+
+### Foreground Processes
+
+**What they are:**
+- Run in active terminal session
+- Visible output in terminal
+- Stop when terminal closes
+- Interactive access available
+
+**How Stock RAVA uses them:**
+
+1. **Screen Session Method:**
+   ```bash
+   screen -r stock_rava
+   ```
+   - Process runs in screen session
+   - Can attach/detach
+   - See live output
+   - Interactive debugging
+
+2. **Direct Run (Development):**
+   ```bash
+   streamlit run Stock_RAVA.py
+   ```
+   - Runs in current terminal
+   - See all output
+   - Interactive debugging
+   - Stops when terminal closes
+
+**Characteristics:**
+- ✅ Easy to debug
+- ✅ See live output
+- ✅ Interactive access
+- ✅ Good for development
+- ❌ Stops with terminal
+- ❌ Not suitable for production
+- ❌ Requires active session
+
+### Process Lifecycle Comparison
+
+| Aspect | Background (nohup) | Background (systemd) | Foreground (screen) |
+|--------|-------------------|---------------------|-------------------|
+| **Terminal closure** | ✅ Survives | ✅ Survives | ❌ Stops |
+| **Auto-restart** | ❌ No | ✅ Yes | ❌ No |
+| **Auto-start** | ❌ No | ✅ Yes | ❌ No |
+| **Logging** | File-based | journald | Terminal |
+| **Debugging** | View logs | View logs | Live output |
+| **Production** | ⚠️ Limited | ✅ Yes | ❌ No |
+| **Development** | ✅ Yes | ✅ Yes | ✅ Best |
+
+---
+
+## System Architecture
+
+**Detailed technical architecture of Stock RAVA deployment:**
+
+### Process Flow
+
+```
+User Action
+    ↓
+Desktop Icon Click
+    ↓
+xdg-open http://localhost:8501
+    ↓
+Browser Request
+    ↓
+Streamlit Server (Port 8501)
+    ↓
+Stock_RAVA.py Application
+    ↓
+Response to Browser
+```
+
+### Component Interaction
+
+1. **Desktop Shortcut** (`stock-rava.desktop`)
+   - Executes: `xdg-open http://localhost:8501`
+   - Opens default browser
+   - No direct process management
+
+2. **Background Process** (nohup/systemd)
+   - Runs: `streamlit run Stock_RAVA.py`
+   - Listens on: `localhost:8501`
+   - Serves web interface
+
+3. **Application** (`Stock_RAVA.py`)
+   - Streamlit web framework
+   - Processes stock data
+   - Generates visualizations
+   - Serves HTML/JavaScript
+
+### File Structure
+
+```
+stock-rava/
+├── Stock_RAVA.py              # Main application
+├── stock-rava-icon.png        # Desktop icon
+├── stock-rava.desktop         # Desktop shortcut file
+├── app_common.sh              # Shared functions
+├── start_app_background.sh    # Background process script
+├── start_app_screen.sh        # Screen session script
+├── install_service.sh         # Systemd service installer
+├── stop_app.sh                # Process stopper
+├── status_app.sh              # Status checker
+├── install_desktop.sh         # Desktop shortcut installer
+├── stock_rava.log             # Background process logs
+└── stock_rava.pid             # Process ID file
+```
+
+### Process Management
+
+**Background Script Method:**
+- PID stored in `stock_rava.pid`
+- Logs in `stock_rava.log`
+- Managed via `stop_app.sh` and `status_app.sh`
+
+**Systemd Service Method:**
+- Service file: `~/.config/systemd/user/stock-rava.service`
+- Managed via `systemctl --user`
+- Logs via `journalctl --user`
+
+**Screen Session Method:**
+- Session name: `stock_rava`
+- Managed via `screen` commands
+- Output visible when attached
+
+---
+
+## Advanced Configuration
+
+**For developers: Customizing and extending Stock RAVA deployment:**
+
+### Custom Streamlit Configuration
+
+Create `.streamlit/config.toml`:
+```toml
+[server]
+port = 8501
+address = "127.0.0.1"  # localhost only
+headless = true
+
+[browser]
+gatherUsageStats = false
+```
+
+### Environment Variables
+
+**Set in systemd service:**
+Edit `~/.config/systemd/user/stock-rava.service`:
+```ini
+[Service]
+Environment="STREAMLIT_SERVER_PORT=8501"
+Environment="PYTHONPATH=/path/to/project"
+```
+
+### Multiple Instances
+
+Run multiple instances on different ports:
+```bash
+# Instance 1 (port 8501)
+streamlit run Stock_RAVA.py --server.port 8501
+
+# Instance 2 (port 8502)
+streamlit run Stock_RAVA.py --server.port 8502
+```
+
+### Script Customization
+
+**Modifying startup behavior:**
+- Edit `app_common.sh` for shared functions
+- Modify individual scripts for specific behavior
+- All scripts source `app_common.sh` for consistency
+
+---
+
+## Troubleshooting & Debugging
+
+**For developers: Diagnosing and fixing issues:**
+
+### Debugging Background Processes
+
+**Check process status:**
+```bash
+# Using status script
+./status_app.sh
+
+# Manual check
+ps aux | grep streamlit
+cat stock_rava.pid  # If using background script
+```
+
+**View logs:**
+```bash
+# Background script logs
+tail -f stock_rava.log
+
+# Systemd service logs
+journalctl --user -u stock-rava.service -f
+
+# Last 50 lines
+journalctl --user -u stock-rava.service -n 50
+```
+
+**Check port binding:**
+```bash
+# See what's using port 8501
+ss -tuln | grep :8501
+lsof -i :8501
+
+# Test connection
+curl http://localhost:8501
+```
+
+### Common Issues
+
+**Script exits immediately after "Using system Python":**
+- Fixed in current version (uses `setup_python_env || true`)
+- If still happening, check Streamlit installation:
+  ```bash
+  streamlit --version
+  pip install streamlit --break-system-packages
+  ```
+
+**Port already in use:**
+```bash
+# Find and kill process
+lsof -ti :8501 | xargs kill -9
+# Or use stop script
+./stop_app.sh
+```
+
+**Service won't start:**
+```bash
+# Check service status
+systemctl --user status stock-rava.service -l --no-pager
+
+# Check logs
+journalctl --user -u stock-rava.service
+
+# Verify service file
+cat ~/.config/systemd/user/stock-rava.service
+```
+
+**Virtual environment not detected:**
+```bash
+# Check venv exists
+ls -la | grep -E "venv|fintech_env|.venv"
+
+# Manual activation test
+source venv/bin/activate  # or fintech_env/bin/activate
+which python
+streamlit --version
+```
+
+### Development Debugging
+
+**Run in foreground for debugging:**
+```bash
+# Direct run (see all output)
+streamlit run Stock_RAVA.py
+
+# Or use screen session
+./start_app_screen.sh
+screen -r stock_rava
+```
+
+**Enable verbose logging:**
+```bash
+# Streamlit debug mode
+streamlit run Stock_RAVA.py --logger.level=debug
+
+# Python debug mode
+python -m streamlit run Stock_RAVA.py --logger.level=debug
+```
+
+### Performance Debugging
+
+**Monitor resource usage:**
+```bash
+# While app is running
+top -p $(cat stock_rava.pid)
+
+# Or use htop
+htop
+
+# Check memory
+ps aux | grep streamlit | awk '{print $4, $11}'
+```
+
+**Check for memory leaks:**
+```bash
+# Monitor over time
+watch -n 5 'ps aux | grep streamlit'
+```
 
 ---
 
@@ -124,7 +773,7 @@ pip install -r requirements_app.txt --break-system-packages
 
 ---
 
-## Advanced: Virtual Environments (Optional)
+## Virtual Environments (Optional)
 
 **Note:** This section is optional. For dedicated small Linux boxes, system-wide installation (above) is simpler and sufficient.
 
@@ -229,6 +878,10 @@ pip install -r requirements_app.txt
 ./start_app_background.sh
 ```
 
+**Access the application:**
+- Open your browser and go to: **http://localhost:8501**
+- The script may auto-open your browser, but you can always navigate manually
+
 **Features:**
 - Runs in background using `nohup`
 - Auto-opens browser (if `xdg-open` available)
@@ -267,6 +920,10 @@ pip install -r requirements_app.txt
 ```bash
 ./start_app_screen.sh
 ```
+
+**Access the application:**
+- Open your browser and go to: **http://localhost:8501**
+- You can detach from screen and the app will keep running
 
 **Features:**
 - Creates named screen session (`stock_rava`)
@@ -313,14 +970,23 @@ sudo yum install screen
 sudo dnf install screen
 ```
 
-### Option 3: Systemd User Service (Production)
+### Option 3: Systemd User Service (Production) - **Recommended for Auto-Start**
 
-**Best for**: Production deployment, auto-start, reliability
+**Best for**: Production deployment, auto-start on boot, reliability
 
-**Install the service:**
+**Install the service (auto-starts on boot):**
 ```bash
+cd ~/stock-rava
 ./install_service.sh
+
+# Enable lingering (so it runs even when not logged in)
+loginctl enable-linger $USER
 ```
+
+**Access the application:**
+- Open your browser and go to: **http://localhost:8501**
+- Service runs automatically after installation (if you chose to start it)
+- **Will start automatically on every boot** once enabled
 
 **Features:**
 - Auto-starts on user login
@@ -370,11 +1036,16 @@ journalctl --user -u stock-rava.service -n 50
 - ⚠️ Requires systemd (most modern Linux distros have it)
 - ⚠️ Requires user service support
 
-**Enable lingering (if service should run when logged out):**
+**Enable lingering (so service runs on boot even when not logged in):**
 ```bash
-# For user services to run without login session
+# This allows the service to start on system boot, not just on login
 loginctl enable-linger $USER
+
+# To disable lingering (service only starts on login)
+loginctl disable-linger $USER
 ```
+
+**Important:** Without lingering, the service only starts when you log in. With lingering enabled, it starts when the system boots, even if no one is logged in.
 
 ---
 
@@ -431,6 +1102,25 @@ sudo ufw status
 
 ## Troubleshooting
 
+### How do I access the application?
+
+**The application is a web interface accessed through your browser:**
+
+1. **Make sure the app is running:**
+   ```bash
+   ./status_app.sh
+   ```
+
+2. **Open your web browser** (Firefox, Chrome, Chromium, etc.)
+
+3. **Navigate to**: `http://localhost:8501`
+
+4. **If it doesn't load:**
+   - Check if the app is actually running: `./status_app.sh`
+   - Check if port 8501 is in use: `ss -tuln | grep :8501`
+   - Check logs: `tail -f stock_rava.log` or `journalctl --user -u stock-rava.service -f`
+   - Try restarting: `./stop_app.sh` then `./start_app_background.sh`
+
 ### App won't start
 
 **Check Python version:**
@@ -458,6 +1148,20 @@ lsof -ti :8501 | xargs kill -9
 ```
 
 ### Background script issues
+
+**Script exits immediately after "Using system Python":**
+
+If the script stops right after showing "✓ Using system Python (system-wide installation)" without starting the app, this was a known issue that has been fixed. If you encounter this:
+
+1. Make sure you have the latest version of `start_app_background.sh`
+2. The script should continue and show "✓ Streamlit found" - if it doesn't, check your Streamlit installation:
+   ```bash
+   streamlit --version
+   ```
+3. If Streamlit is not found, install it:
+   ```bash
+   pip install streamlit --break-system-packages
+   ```
 
 **Check if process is running:**
 ```bash
