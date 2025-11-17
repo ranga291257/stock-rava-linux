@@ -37,7 +37,7 @@ fi
 USER_SERVICE_DIR="$HOME/.config/systemd/user"
 mkdir -p "$USER_SERVICE_DIR"
 
-# Detect virtual environment if present (checks fintech_env first)
+# Detect virtual environment if present (optional - uses system Python if not found)
 PYTHON_CMD=$(which python3)
 VENV_PATH=""
 
@@ -45,7 +45,6 @@ if [ -f "$PROJECT_ROOT/fintech_env/bin/python" ]; then
     PYTHON_CMD="$PROJECT_ROOT/fintech_env/bin/python"
     VENV_PATH="$PROJECT_ROOT/fintech_env/bin:"
     echo -e "${GREEN}✓ Using fintech_env Python: $PYTHON_CMD${NC}"
-    echo -e "${CYAN}  (Recommended: keeps system Python clean)${NC}"
 elif [ -f "$PROJECT_ROOT/venv/bin/python" ]; then
     PYTHON_CMD="$PROJECT_ROOT/venv/bin/python"
     VENV_PATH="$PROJECT_ROOT/venv/bin:"
@@ -55,9 +54,7 @@ elif [ -f "$PROJECT_ROOT/.venv/bin/python" ]; then
     VENV_PATH="$PROJECT_ROOT/.venv/bin:"
     echo -e "${GREEN}✓ Using .venv Python: $PYTHON_CMD${NC}"
 else
-    echo -e "${YELLOW}⚠ No virtual environment detected${NC}"
-    echo -e "${YELLOW}  Recommendation: Create fintech_env before installing service${NC}"
-    echo -e "${YELLOW}  Run: python3 -m venv fintech_env && source fintech_env/bin/activate && pip install -r requirements_app.txt${NC}"
+    echo -e "${GREEN}✓ Using system Python (system-wide installation)${NC}"
 fi
 
 # Create service file with actual paths

@@ -140,9 +140,8 @@ echo -e "${CYAN}9. Checking for virtual environment...${NC}"
 if [ -n "$VIRTUAL_ENV" ]; then
     echo -e "${GREEN}✓ Virtual environment active: $VIRTUAL_ENV${NC}"
 elif [ -d "$PROJECT_ROOT/fintech_env" ]; then
-    echo -e "${GREEN}✓ Found fintech_env (recommended for finance projects)${NC}"
+    echo -e "${GREEN}✓ Found fintech_env${NC}"
     echo "   Activate with: source fintech_env/bin/activate"
-    echo "   Keeps system Python 3.12.7 clean!"
 elif [ -d "$PROJECT_ROOT/venv" ]; then
     echo -e "${GREEN}✓ Found venv directory (not activated)${NC}"
     echo "   Activate with: source venv/bin/activate"
@@ -150,10 +149,8 @@ elif [ -d "$PROJECT_ROOT/.venv" ]; then
     echo -e "${GREEN}✓ Found .venv directory (not activated)${NC}"
     echo "   Activate with: source .venv/bin/activate"
 else
-    echo -e "${YELLOW}⚠ No virtual environment found${NC}"
-    echo -e "${YELLOW}  Recommendation: Create fintech_env to keep system Python clean${NC}"
-    echo "   Run: python3 -m venv fintech_env"
-    echo "   Then: source fintech_env/bin/activate && pip install -r requirements_app.txt"
+    echo -e "${GREEN}✓ Using system Python (system-wide installation)${NC}"
+    echo "   Virtual environment optional - fine for dedicated small Linux boxes"
 fi
 
 echo ""
@@ -173,5 +170,5 @@ echo ""
 echo "4. Stop the app:"
 echo "   ${CYAN}./stop_app.sh${NC}"
 echo ""
-echo -e "${GREEN}For detailed WSL testing guide, see: TEST_WSL.md${NC}"
+echo -e "${GREEN}For detailed WSL testing guide, see: README_LINUX.md (Testing in WSL section)${NC}"
 

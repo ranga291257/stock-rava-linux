@@ -5,25 +5,12 @@
 
 set -e
 
-# Get script directory (this is now the project root)
+# Source common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
-cd "$PROJECT_ROOT"
+source "$SCRIPT_DIR/app_common.sh"
 
 # Screen session name
 SESSION_NAME="stock_rava"
-
-# Colors
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
 
 # Check if screen is installed
 if ! command_exists screen; then
@@ -41,31 +28,17 @@ if ! command_exists screen; then
 fi
 
 # Check Python
-if ! command_exists python3; then
-    echo -e "${RED}✗ Python 3 not found${NC}"
-    exit 1
-fi
+check_python || exit 1
 
-# Auto-detect virtual environment
-STREAMLIT_CMD="streamlit"
-if [ -n "$VIRTUAL_ENV" ]; then
-    STREAMLIT_CMD="$VIRTUAL_ENV/bin/streamlit"
-    echo -e "${GREEN}✓ Virtual environment detected: $VIRTUAL_ENV${NC}"
-elif [ -f "$PROJECT_ROOT/fintech_env/bin/activate" ]; then
-    echo -e "${GREEN}✓ Found fintech_env in project${NC}"
-    STREAMLIT_CMD="$PROJECT_ROOT/fintech_env/bin/streamlit"
-elif [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
-    echo -e "${GREEN}✓ Found venv in project${NC}"
-    STREAMLIT_CMD="$PROJECT_ROOT/venv/bin/streamlit"
-elif [ -f "$PROJECT_ROOT/.venv/bin/activate" ]; then
-    echo -e "${GREEN}✓ Found .venv in project${NC}"
-    STREAMLIT_CMD="$PROJECT_ROOT/.venv/bin/streamlit"
-fi
+# Get streamlit command (for screen we use full path, not activate)
+STREAMLIT_CMD=$(get_streamlit_cmd)
 
 # Check Streamlit
-if ! command_exists "$STREAMLIT_CMD" 2>/dev/null && [ "$STREAMLIT_CMD" = "streamlit" ]; then
-    echo -e "${YELLOW}✗ Streamlit not found. Installing...${NC}"
-    pip3 install streamlit
+if [ "$STREAMLIT_CMD" = "streamlit" ]; then
+    if ! command_exists streamlit; then
+        echo -e "${YELLOW}✗ Streamlit not found. Installing...${NC}"
+        pip3 install streamlit
+    fi
 fi
 
 # Check if session already exists
@@ -81,7 +54,7 @@ echo -e "${CYAN}Starting Stock RAVA in GNU Screen session '$SESSION_NAME'...${NC
 echo -e "${CYAN}App will be available at: http://localhost:8501${NC}"
 
 # Create detached screen session and run Streamlit
-# Activate venv if it exists
+# Use appropriate venv activation or system Python
 if [ -f "$PROJECT_ROOT/fintech_env/bin/activate" ]; then
     screen -dmS "$SESSION_NAME" bash -c "cd '$PROJECT_ROOT' && source fintech_env/bin/activate && streamlit run Stock_RAVA.py --server.headless true; exec bash"
 elif [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
@@ -111,4 +84,3 @@ else
     echo -e "${RED}✗ Failed to start screen session${NC}"
     exit 1
 fi
-

@@ -4,26 +4,9 @@
 
 set -e  # Exit on error
 
-# Get script directory (this is now the project root)
+# Source common functions
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
-cd "$PROJECT_ROOT"
-
-# PID and log file locations
-PID_FILE="$SCRIPT_DIR/stock_rava.pid"
-LOG_FILE="$SCRIPT_DIR/stock_rava.log"
-
-# Colors for output
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
-# Function to check if command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+source "$SCRIPT_DIR/app_common.sh"
 
 # Check if already running
 if [ -f "$PID_FILE" ]; then
@@ -39,68 +22,13 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 # Check Python
-if ! command_exists python3; then
-    echo -e "${RED}✗ Python 3 not found. Please install Python 3.8 or higher.${NC}"
-    exit 1
-fi
+check_python || exit 1
 
-PYTHON_VERSION=$(python3 --version 2>&1 | awk '{print $2}' | cut -d. -f1,2)
-echo -e "${GREEN}✓ Python ${PYTHON_VERSION} found${NC}"
-
-# Auto-detect virtual environment (checks fintech_env first for finance projects)
-if [ -n "$VIRTUAL_ENV" ]; then
-    echo -e "${GREEN}✓ Virtual environment detected: $VIRTUAL_ENV${NC}"
-    PYTHON_CMD="$VIRTUAL_ENV/bin/python"
-    PIP_CMD="$VIRTUAL_ENV/bin/pip"
-    STREAMLIT_CMD="$VIRTUAL_ENV/bin/streamlit"
-elif [ -f "$PROJECT_ROOT/fintech_env/bin/activate" ]; then
-    echo -e "${GREEN}✓ Found fintech_env, activating...${NC}"
-    echo -e "${CYAN}  (Recommended: keeps system Python 3.12.7 clean)${NC}"
-    source "$PROJECT_ROOT/fintech_env/bin/activate"
-    PYTHON_CMD="python"
-    PIP_CMD="pip"
-    STREAMLIT_CMD="streamlit"
-elif [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
-    echo -e "${GREEN}✓ Found venv in project, activating...${NC}"
-    source "$PROJECT_ROOT/venv/bin/activate"
-    PYTHON_CMD="python"
-    PIP_CMD="pip"
-    STREAMLIT_CMD="streamlit"
-elif [ -f "$PROJECT_ROOT/.venv/bin/activate" ]; then
-    echo -e "${GREEN}✓ Found .venv in project, activating...${NC}"
-    source "$PROJECT_ROOT/.venv/bin/activate"
-    PYTHON_CMD="python"
-    PIP_CMD="pip"
-    STREAMLIT_CMD="streamlit"
-else
-    echo -e "${YELLOW}⚠ No virtual environment found - using system Python${NC}"
-    echo -e "${YELLOW}  Recommendation: Create fintech_env to keep system Python clean${NC}"
-    echo -e "${YELLOW}  Run: python3 -m venv fintech_env${NC}"
-    PYTHON_CMD="python3"
-    PIP_CMD="pip3"
-    STREAMLIT_CMD="streamlit"
-fi
+# Setup Python environment (venv or system)
+setup_python_env
 
 # Check Streamlit
-if [ "$STREAMLIT_CMD" = "streamlit" ]; then
-    # Using system streamlit, check if it exists
-    if ! command_exists streamlit; then
-        echo -e "${YELLOW}✗ Streamlit not found. Installing...${NC}"
-        $PIP_CMD install streamlit
-        if [ $? -ne 0 ]; then
-            echo -e "${RED}✗ Failed to install Streamlit. Please install manually: $PIP_CMD install streamlit${NC}"
-            exit 1
-        fi
-    fi
-elif [ -f "$STREAMLIT_CMD" ]; then
-    # Using venv streamlit, verify it exists
-    if [ ! -x "$STREAMLIT_CMD" ]; then
-        echo -e "${RED}✗ Streamlit found but not executable: $STREAMLIT_CMD${NC}"
-        exit 1
-    fi
-fi
-
-echo -e "${GREEN}✓ Streamlit found${NC}"
+check_streamlit || exit 1
 
 # Ubuntu 24.x specific checks
 if [ -f /etc/os-release ]; then
@@ -114,22 +42,8 @@ if [ -f /etc/os-release ]; then
     fi
 fi
 
-# Check if port 8501 is in use
-if command_exists ss; then
-    if ss -tuln 2>/dev/null | grep -q ':8501 '; then
-        echo -e "${YELLOW}⚠ Port 8501 is already in use${NC}"
-        echo "Stopping existing processes..."
-        pkill -f "streamlit.*Stock_RAVA" 2>/dev/null || true
-        sleep 2
-    fi
-elif command_exists netstat; then
-    if netstat -tuln 2>/dev/null | grep -q ':8501 '; then
-        echo -e "${YELLOW}⚠ Port 8501 is already in use${NC}"
-        echo "Stopping existing processes..."
-        pkill -f "streamlit.*Stock_RAVA" 2>/dev/null || true
-        sleep 2
-    fi
-fi
+# Check port
+check_port
 
 # Start Streamlit in background
 echo -e "\n${CYAN}Starting Stock RAVA in background...${NC}"
@@ -168,4 +82,3 @@ else
     rm -f "$PID_FILE"
     exit 1
 fi
-
